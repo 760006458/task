@@ -28,13 +28,13 @@
 
 ## 核心类
 
-[PackageScanApplicationContextInitializer](https://github.com/760006458/task/blob/master/src/main/java/com/github/xuan/task/config/PackageScanApplicationContextInitializer.java)
+包扫描的类： [PackageScanApplicationContextInitializer](https://github.com/760006458/task/blob/master/src/main/java/com/github/xuan/task/config/PackageScanApplicationContextInitializer.java)
 
-[TaskHandlerRegister](https://github.com/760006458/task/blob/master/src/main/java/com/github/xuan/task/register/TaskHandlerRegister.java)
+handler注册类： [TaskHandlerRegister](https://github.com/760006458/task/blob/master/src/main/java/com/github/xuan/task/register/TaskHandlerRegister.java)
 
-[TaskServiceImpl](https://github.com/760006458/task/blob/master/src/main/java/com/github/xuan/task/service/TaskServiceImpl.java)
+定时任务&任务调度类： [TaskServiceImpl](https://github.com/760006458/task/blob/master/src/main/java/com/github/xuan/task/service/TaskServiceImpl.java)
 
-[TaskMapper](https://github.com/760006458/task/blob/master/src/main/resources/mapping/TaskMapper.xml)
+task的mapper文件： [TaskMapper](https://github.com/760006458/task/blob/master/src/main/resources/mapping/TaskMapper.xml)
 
 
 ## Task表结构
