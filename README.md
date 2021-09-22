@@ -60,11 +60,14 @@ CREATE TABLE `task` (
 
 ## 快速接入
 
-步骤1: 下载代码并deploy到公司私服库或其他仓库，在原项目引入task的maven坐标
+#### 步骤1
+下载代码并deploy到公司私服库或其他仓库，在原项目引入task的maven坐标
 
-步骤2: 根据task.sql文件建表
+#### 步骤2
+根据task.sql文件建表
 
-步骤3: 原项目的springboot配置(参见TaskConfig类)：
+#### 步骤3
+原项目的springboot配置(参见TaskConfig类)：
 ```yaml
 task:
     github:
@@ -78,7 +81,8 @@ task:
             type: 100
 ```
 
-步骤4: 业务代码中taskService.submitTask(xxx);
+#### 步骤4
+业务代码中taskService.submitTask(xxx);
 ```
 ...
 ...
@@ -95,7 +99,8 @@ taskService.submitTask(TaskCreateParam.builder()
 
 ```
 
-步骤5: 创建自定义handler，实现ShortRunTaskHandler或LongRunTaskHandler接口，在handleShortTask()方法中写任务逻辑。参见：TestHandler
+#### 步骤5
+创建自定义handler，实现ShortRunTaskHandler或LongRunTaskHandler接口，在handleShortTask()方法中写任务逻辑。参见：TestHandler
 ```java
 @Slf4j
 @Component
