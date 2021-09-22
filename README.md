@@ -79,8 +79,34 @@ task:
 ```
 
 步骤4: 业务代码中taskService.submitTask(xxx);
+```
+...
+...
 
-步骤5: 创建自定义handler，实现ShortRunTaskHandler或LongRunTaskHandler接口，在handleShortTask()方法中写任务逻辑
+log.error("xxx处理异常，交由task系统处理");
+taskService.submitTask(TaskCreateParam.builder()
+        .type(TaskType.GOODS_SNAPSHOT_TO_HBASE.code)
+        .taskKey(message.getString(TRACE_ID))
+        .context(message.toJSONString())
+        .maxAttempts(3)
+        .build());
+...
+...
+
+```
+
+步骤5: 创建自定义handler，实现ShortRunTaskHandler或LongRunTaskHandler接口，在handleShortTask()方法中写任务逻辑。参见：TestHandler
+```java
+@Slf4j
+@Component
+public class TestHandler implements ShortRunTaskHandler {
+
+    public TaskResult handleShortTask(TaskContext taskContext) {
+        log.info("处理测试任务开始...");
+        return TaskResult.successWith("test success");
+    }
+}
+```
 
 
 ##注意事项
@@ -89,6 +115,7 @@ task:
    示例：某个定时任务要连续处理10万条数据，不要1条数据插1条task任务；可以每100条一个批次，共插入1000条task任务
 3. 根据集群容器数量和task分表数量，合理设置定时任务频率
 4. 由于定时任务A的扫描频次可能不高，可能导致task任务的实际执行时间滞后几秒
+5. 可以把发生异常时的处理逻辑，交给task系统解耦和重试，可以减少task的创建数量
 
 
 ## 未来TODO
