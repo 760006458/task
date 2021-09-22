@@ -1,6 +1,7 @@
 # Task任务系统
 
 ## 背景&痛点
+
 1. MQ消息不可见，不能支持SQL查询，排错困难
 2. MySQL控制不了分布式事务，需要异步解耦的场景只能依赖MQ事务消息
 3. 长任务(耗时>10秒)：发版中断等场景下无法保证可靠性，需要引入自动重试、存档点等概念
@@ -10,7 +11,7 @@
 7. 一个任务类型接入一个MQ，MQ越接越多
 8. 无法获取到某条消息的处理机器IP，对于中断的任务，无法让原机器继续执行
 9. 任务如何做到肉眼可见，并且人工可以随时干预：终止任务、修改执行时间、修改最大重试次数等
-10. 无法统计消息处理的首次/二次成功率和耗时
+10. 无法统计消息处理的成功率、耗时等指标并在web展示
 
 
 ## Task介绍
@@ -24,6 +25,16 @@
 6. 超长任务：假设已经无法再拆分成更小的任务了，但任务耗时还很长(eg:10分钟或者几个小时)，可以创建LongRunTask，它在执行过程中会自动存档；
 7. 如果在事务中：基于业务操作MySQL，然后insert一条task记录，事务可以保证两者同时成功，实现了强一致的分布式事务
 8. 有了MySQL表，各种统计随心所欲
+
+## 核心类
+
+[PackageScanApplicationContextInitializer](https://github.com/760006458/task/blob/master/src/main/java/com/github/xuan/task/config/PackageScanApplicationContextInitializer.java)
+
+[TaskHandlerRegister](https://github.com/760006458/task/blob/master/src/main/java/com/github/xuan/task/register/TaskHandlerRegister.java)
+
+[TaskServiceImpl](https://github.com/760006458/task/blob/master/src/main/java/com/github/xuan/task/service/TaskServiceImpl.java)
+
+[TaskMapper](https://github.com/760006458/task/blob/master/src/main/resources/mapping/TaskMapper.xml)
 
 
 ## Task表结构
@@ -127,8 +138,7 @@ public class TestHandler implements ShortRunTaskHandler {
 ## 注意事项
 1. 合理评估业务和MySQL的TPS，task-insert频次别压垮MySQL
 2. 评估task表的数据增长速度，B端系统一般不要超过几十万/天，如果量太大，需要按批次合并任务，分表并做好物理删除&备份。
-   
-   示例：某个定时任务要连续处理10万条数据，不要1条数据插1条task任务；可以每100条一个批次，共插入1000条task任务
+   > 示例：某个定时任务要连续处理10万条数据，不要1条数据插1条task任务，可以每100条一个批次，共插入1000条task任务
 3. 根据集群容器数量和task分表数量，合理设置定时任务频率
 4. 由于定时任务A的扫描频次可能不高，可能导致task任务的实际执行时间滞后几秒
 5. 可以把发生异常时的处理逻辑，交给task系统解耦和重试，可以减少task的创建数量
