@@ -40,7 +40,7 @@ public class HandlerContext {
         if (taskHandler == null) {
             throw new RuntimeException("handler is null");
         }
-        TaskHandler handler = TASK_HANDLERS.putIfAbsent(ofTaskType(taskHandler.getHandlerName()).getType(), taskHandler);
+        TaskHandler handler = TASK_HANDLERS.putIfAbsent(ofTaskType(taskHandler.getHandlerName()), taskHandler);
         if (handler != null) {
             if (handler.getClass() == taskHandler.getClass()) {
                 String template = "%s only support register once";
@@ -48,11 +48,11 @@ public class HandlerContext {
                 throw new UnsupportedOperationException(message);
             } else {
                 String template = "A task type does not support multiple handlers. Exist type & handler pair [%s]-[%s]";
-                String message = String.format(template, ofTaskType(taskHandler.getHandlerName()).getType(), taskHandler.getClass());
+                String message = String.format(template, ofTaskType(taskHandler.getHandlerName()), taskHandler.getClass());
                 throw new UnsupportedOperationException(message);
             }
         } else {
-            log.info("TaskHandler[{}] Registered!", ofTaskType(taskHandler.getHandlerName()).getType());
+            log.info("TaskHandler[{}] Registered!", ofTaskType(taskHandler.getHandlerName()));
         }
     }
 
@@ -80,9 +80,9 @@ public class HandlerContext {
     /**
      * 根据taskName获取TaskType对象
      */
-    private TaskType ofTaskType(String handlerName) {
+    public Integer ofTaskType(String handlerName) {
         TaskType taskType = TASK_TYPES.get(handlerName);
         Validates.checkNotNull(taskType, String.format("handlerName=%s不存在", handlerName));
-        return taskType;
+        return taskType.type;
     }
 }

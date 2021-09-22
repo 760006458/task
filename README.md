@@ -83,19 +83,25 @@ task:
 
 #### 步骤4
 业务代码中taskService.submitTask(xxx);
-```
-...
-...
-
-log.error("xxx处理异常，交由task系统处理");
-taskService.submitTask(TaskCreateParam.builder()
-        .type(TaskType.GOODS_SNAPSHOT_TO_HBASE.code)
-        .taskKey(message.getString(TRACE_ID))
-        .context(message.toJSONString())
-        .maxAttempts(3)
-        .build());
-...
-...
+```java
+public class BussinessClass {
+    @Resource
+    private HandlerContext handlerContext;
+    
+    @Transactional(rollbackFor = Exception.class)
+    public void bussinessMethod(xxx x) {
+        //1.业务逻辑
+        
+        //2.创建task任务
+        taskService.submitTask(TaskCreateParam.builder()
+                //TODO 这里还没有想好更优雅的方案
+                .type(handlerContext.ofTaskType("TestHandler"))
+                .taskKey(goodsId)
+                .context(JsonUtils.toString(goods))
+                .maxAttempts(3)
+                .build());
+    }
+}
 
 ```
 
