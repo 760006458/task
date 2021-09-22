@@ -1,7 +1,7 @@
 CREATE TABLE `task` (
     `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增主键',
     `type` int(11) NOT NULL default 0 COMMENT '类型',
-    `task_key` varchar(50) NOT NULL default '' COMMENT '任务key',
+    `task_key` varchar(50) NOT NULL default '' COMMENT '任务key:一般存业务id等有含义的值方便查询',
     `context` text COMMENT '任务内容',
     `submit_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '提交时间',
     `expect_execute_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '期望执行时间',
