@@ -103,6 +103,9 @@ public class TestHandler implements ShortRunTaskHandler {
 
     public TaskResult handleShortTask(TaskContext taskContext) {
         log.info("处理测试任务开始...");
+        
+        //TODO 业务逻辑
+        
         return TaskResult.successWith("test success");
     }
 }

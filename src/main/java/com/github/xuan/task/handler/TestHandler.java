@@ -21,6 +21,9 @@ package com.github.xuan.task.handler;
 //    @Override
 //    public TaskResult handleShortTask(TaskContext taskContext) {
 //        log.info("处理测试任务开始，任务内容：{}", JsonUtil.toJsonStr(taskContext.getContext()));
+//
+//        //TODO 业务逻辑
+//
 //        return TaskResult.successWith("test success");
 //    }
 //}
