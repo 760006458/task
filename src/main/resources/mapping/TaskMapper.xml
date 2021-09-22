@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.github.xuan.task.dao.mapper.TaskMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.github.xuan.task.dao.domain.TaskDO">
+        <id column="id" property="id" />
+        <result column="type" property="type" />
+        <result column="task_key" property="taskKey" />
+        <result column="context" property="context" />
+        <result column="submit_time" property="submitTime" />
+        <result column="status" property="status" />
+        <result column="locked_time" property="lockedTime" />
+        <result column="version" property="version" />
+        <result column="memo" property="memo" />
+        <result column="timeout_time" property="timeoutTime" />
+        <result column="expect_execute_time" property="expectExecuteTime" />
+        <result column="delay" property="delay" />
+        <result column="multiplier" property="multiplier" />
+        <result column="max_attempts" property="maxAttempts" />
+        <result column="attempts" property="attempts" />
+        <result column="checkpoint" property="checkpoint" />
+        <result column="host" property="host" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+    </resultMap>
+
+    <!-- status:1=待处理,2=处理中,3=已完成,4=已失败 -->
+    <insert id="create">
+        <!--ignore会使不为空约束失效,当传了null,mysql自动填入该字段类型默认值; 如果(type+task_key)已存在，则当前数据插入失败且不报错-->
+        insert ignore into
+        task(type, task_key, context, submit_time, expect_execute_time, delay, multiplier, max_attempts, attempts, prior, status, version, host)
+        values
+        (#{type}, #{taskKey}, #{context}, #{submitTime}, #{expectExecuteTime}, #{delay}, #{multiplier}, #{maxAttempts}, #{attempts}, #{prior}, 1, 0, #{host})
+    </insert>
+
+    <insert id="batchCreate">
+        insert ignore into
+        task(type, task_key, context, submit_time, expect_execute_time, delay, multiplier, max_attempts, attempts, prior, status, version, host)
+        values
+        <foreach item="item" collection="list" index="index" separator=",">
+            (#{item.type}, #{item.taskKey}, #{item.context}, now(), #{item.expectExecuteTime}, #{item.delay},
+            #{item.multiplier}, #{item.maxAttempts}, #{item.attempts}, #{item.prior}, 1, 0, #{item.host})
+        </foreach>
+    </insert>
+
+    <!-- 状态置为处理中-->
+    <update id="grab">
+        update
+            task
+        set
+            locked_time  = now(),
+            timeout_time = now() + interval 15 minute,
+            status       = 2,
+            version      = version + 1,
+            host         = #{host}
+        where
+            id = #{id}
+            and version = #{version}
+    </update>
+
+    <update id="fail">
+        update task
+        set
+        <if test="memo != null">
+            memo = #{memo},
+        </if>
+        attempts = attempts + 1, status = 4
+        where
+        id = #{id} and version = #{version}
+    </update>
+
+    <update id="success">
+        update
+            task
+        set
+            attempts = attempts + 1,
+            status   = 3,
+            memo     = #{memo}
+        where
+            id = #{id}
+            and version = #{version}
+    </update>
+
+    <update id="retry">
+        update
+            task
+        set
+            attempts = attempts + 1,
+            status = 1,
+            expect_execute_time = expect_execute_time + interval #{delay} second
+        where
+            id = #{id}
+            and version = #{version}
+    </update>
+
+    <!--汇报任务存档点并延期超时时间，同时会限制一个任务最大运行时间不能超过1天-->
+    <update id="saveCheckpoint">
+        update
+            task
+        set
+            checkpoint   = #{checkpoint},
+            timeout_time = least(timeout_time + interval 15 minute, locked_time + interval 1 day)
+        where
+            id = #{id}
+            and version = #{version}
+            and (locked_time + interval 1 day) > now()
+    </update>
+
+    <update id="reRun">
+        update
+            task
+        set
+            attempts = 0,
+            status = 1,
+            expect_execute_time = now()
+        where
+            id = #{id}
+            and status in (3, 4)
+    </update>
+
+    <sql id="selectAllColumn">
+        select
+            id,
+            type,
+            task_key,
+            context,
+            submit_time,
+            status,
+            locked_time,
+            version,
+            memo,
+            timeout_time,
+            expect_execute_time,
+            delay,
+            multiplier,
+            max_attempts,
+            attempts,
+            checkpoint,
+            host,
+            create_time,
+            update_time
+        from task
+    </sql>
+
+    <!--不要加is_delete=false，这个条件几乎都成立，码到索引中不好，如果需要删除任务，只需要更改status=3或4即可-->
+    <!--SQL执行计划：
+        1.走索引idx_expectExecuteTime[status=>expect_execute_time]
+        2.然后顺序扫描，通过覆盖索引比对type、max_attempts、attempts，共筛选size条
+        3.通过覆盖索引去排序
+        4.回表size次获取全量字段
+    -->
+    <select id="batchGetTask" resultMap="BaseResultMap">
+        <include refid="selectAllColumn"/>
+        where
+        status = 1 and now() >= expect_execute_time
+        and type in
+        <foreach item="type" index="index" collection="types" open="(" separator="," close=")">
+            #{type}
+        </foreach>
+        and max_attempts > attempts
+        order by prior desc , expect_execute_time asc
+        limit #{size}
+    </select>
+
+    <select id="batchGetTimeoutTask" resultMap="BaseResultMap">
+        <include refid="selectAllColumn"/>
+        where
+        status = 2 and now() > timeout_time
+        and
+        type in
+        <foreach item="type" index="index" collection="types" open="(" separator="," close=")">
+            #{type}
+        </foreach>
+        and max_attempts > attempts
+        order by prior desc , expect_execute_time asc
+        limit #{size}
+    </select>
+
+    <select id="count" resultType="int" parameterType="com.github.xuan.task.param.TaskQuery">
+        select count(*) from task
+        <where>
+            <if test="type != null">
+                and type = #{type}
+            </if>
+            <if test="statusSet != null and !statusSet.isEmpty()">
+                and status in
+                <foreach item="status" index="index" collection="statusSet" open="(" separator="," close=")">
+                    #{status}
+                </foreach>
+            </if>
+            <if test="taskKey != null">
+                and task_key = #{taskKey}
+            </if>
+        </where>
+    </select>
+
+    <update id="cancel">
+        update task
+        set status = 3
+        where
+        id = #{id}
+    </update>
+
+</mapper>
