@@ -101,27 +101,6 @@ task:
 ```
 
 #### 步骤4
-业务代码中taskService.submitTask(xxx);
-```java
-public class BussinessClass {
-    
-    @Transactional(rollbackFor = Exception.class)
-    public void bussinessMethod(xxx x) {
-        //1.业务逻辑
-        
-        //2.创建task任务
-        taskService.submitTask(TaskCreateParam.builder()
-                .typeHandler(TestHandler.class)
-                .taskKey(goodsId)
-                .context(JsonUtils.toString(goods))
-                .maxAttempts(3)
-                .build());
-    }
-}
-
-```
-
-#### 步骤5
 创建自定义handler，实现ShortRunTaskHandler或LongRunTaskHandler接口，在handleShortTask()方法中写任务逻辑。参见：TestHandler
 ```java
 @Slf4j
@@ -144,6 +123,27 @@ public class TestHandler implements ShortRunTaskHandler {
         return TaskResult.successWith("test success");
     }
 }
+```
+
+#### 步骤5
+业务代码中taskService.submitTask(xxx);
+```java
+public class BussinessClass {
+    
+    @Transactional(rollbackFor = Exception.class)
+    public void bussinessMethod(xxx x) {
+        //1.业务逻辑
+        
+        //2.创建task任务
+        taskService.submitTask(TaskCreateParam.builder()
+                .typeHandler(TestHandler.class)
+                .taskKey(goodsId)
+                .context(JsonUtils.toString(goods))
+                .maxAttempts(3)
+                .build());
+    }
+}
+
 ```
 
 
