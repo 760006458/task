@@ -43,7 +43,7 @@ public class TaskServiceImpl implements TaskService {
     private TaskMapper taskMapper;
 
     @Resource
-    private HandlerContext handlerRegister;
+    private HandlerContext handlerContext;
 
     @Resource
     private ExecutorService executor;
@@ -56,9 +56,10 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public boolean submitTask(TaskCreateParam taskCreateParam) {
         Validates.checkNotNull(taskCreateParam, "taskCreateParam is null");
+        Validates.checkNotNull(taskCreateParam.getTypeHandler(), "typeHandler is null");
         TaskDO taskDO = TaskDO.builder()
                 .submitTime(LocalDateTime.now())
-                .type(taskCreateParam.getType())
+                .type(handlerContext.ofHandlerType(taskCreateParam.getTypeHandler().getSimpleName()))
                 .taskKey(taskCreateParam.getTaskKey())
                 .context(taskCreateParam.getContext())
                 .expectExecuteTime(taskCreateParam.getExpectExecuteTime())
@@ -86,10 +87,10 @@ public class TaskServiceImpl implements TaskService {
     @Override
     @Scheduled(fixedDelayString = "${task.github.fixedDelay.normal:3000}")
     public void execute() {
-        if (handlerRegister.supportedTaskTypes().isEmpty()) {
+        if (handlerContext.supportedTaskTypes().isEmpty()) {
             return;
         }
-        List<TaskDO> tasks = taskMapper.batchGetTask(taskConfig.getNormalBatchSize(), handlerRegister.supportedTaskTypes());
+        List<TaskDO> tasks = taskMapper.batchGetTask(taskConfig.getNormalBatchSize(), handlerContext.supportedTaskTypes());
         grabAndAsyncExecTask(tasks);
     }
 
@@ -100,10 +101,10 @@ public class TaskServiceImpl implements TaskService {
     @Override
     @Scheduled(fixedDelayString = "${task.github.fixedDelay.timeout:60000}")
     public void executeTimeout() {
-        if (handlerRegister.supportedTaskTypes().isEmpty()) {
+        if (handlerContext.supportedTaskTypes().isEmpty()) {
             return;
         }
-        List<TaskDO> tasks = taskMapper.batchGetTimeoutTask(taskConfig.getTimeoutBatchSize(), handlerRegister.supportedTaskTypes());
+        List<TaskDO> tasks = taskMapper.batchGetTimeoutTask(taskConfig.getTimeoutBatchSize(), handlerContext.supportedTaskTypes());
         if (!CollectionUtils.isEmpty(tasks)) {
             log.warn("发现超时任务：{}", JsonUtil.toJsonStr(tasks));
             grabAndAsyncExecTask(tasks);
@@ -168,7 +169,7 @@ public class TaskServiceImpl implements TaskService {
             try {
                 //保证跟数据库字段值同步
                 int version = task.getVersion() + 1;
-                TaskHandler handler = handlerRegister.getTaskHandlerByType(task.getType()).orElse(null);
+                TaskHandler handler = handlerContext.getTaskHandlerByType(task.getType()).orElse(null);
                 if (handler == null) {
                     throw new RuntimeException("不应该出现:在抢任务时只处理本机支持的任务类型");
                 }
@@ -184,7 +185,7 @@ public class TaskServiceImpl implements TaskService {
      * 长任务心跳
      */
     private void heartbeatIfNecessary(TaskDO task, int version, Future<?> future) {
-        TaskHandler handler = handlerRegister.getTaskHandlerByType(task.getType()).orElseThrow(() -> new RuntimeException("不应该出现:在抢任务时只处理本机支持的任务类型"));
+        TaskHandler handler = handlerContext.getTaskHandlerByType(task.getType()).orElseThrow(() -> new RuntimeException("不应该出现:在抢任务时只处理本机支持的任务类型"));
         //判断当前是否是长任务。A.isAssignableFrom(B)：A是B的父类；A instanceof B：A是B的子类
         if (LongRunTaskHandler.class.isAssignableFrom(handler.getClass())) {
             TaskMeta taskMeta = tasksForReport.putIfAbsent(task.getId(), new TaskMeta(task, future, version));
@@ -197,7 +198,7 @@ public class TaskServiceImpl implements TaskService {
 
     private void wrappedTask(TaskDO task, int version) {
         try {
-            TaskHandler taskHandler = handlerRegister.getTaskHandlerByType(task.getType()).orElseThrow(() -> new RuntimeException("不应该出现:在抢任务时只处理本机支持的任务类型"));
+            TaskHandler taskHandler = handlerContext.getTaskHandlerByType(task.getType()).orElseThrow(() -> new RuntimeException("不应该出现:在抢任务时只处理本机支持的任务类型"));
             TaskStatus status = TaskStatus.from(task.getStatus());
             // 这里对参数double-check 防止SQL语句不小心被改动出bug
             Validates.checkArgument(status == TaskStatus.WAIT_FOR_PROCESS || status == TaskStatus.PROCESSING, "task status wrong");

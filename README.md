@@ -90,7 +90,7 @@ CREATE TABLE `task` (
 #### 步骤2
 根据task.sql文件建表
 
-#### 步骤3
+#### 步骤3[缺省则走默认值]
 原项目的springboot配置(参见TaskConfig类)：
 ```yaml
 task:
@@ -98,11 +98,6 @@ task:
         fixedDelay:
             normal: 3000    #定时任务A的fixedDelay频次(毫秒)，根据集群机器数和分表数量合理评估
             timeout: 60000  #定时任务B的fixedDelay频次(毫秒)
-        types:
-          - handlerName: TestHandler    #handler类名。每新增一个handler，都需要配置一份handlerName & type
-            type: 0                     #任务类型(数字)。eg: insert时如果type=0，则任务最终由TestHandler执行
-          - hadlerName: xxx
-            type: 100
 ```
 
 #### 步骤4
@@ -110,17 +105,13 @@ task:
 ```java
 public class BussinessClass {
     
-    @Resource
-    private HandlerContext handlerContext;
-    
     @Transactional(rollbackFor = Exception.class)
     public void bussinessMethod(xxx x) {
         //1.业务逻辑
         
         //2.创建task任务
         taskService.submitTask(TaskCreateParam.builder()
-                //TODO 这里还没有想好更优雅的方案
-                .type(handlerContext.ofTaskType("TestHandler"))
+                .typeHandler(TestHandler.class)
                 .taskKey(goodsId)
                 .context(JsonUtils.toString(goods))
                 .maxAttempts(3)
@@ -135,13 +126,21 @@ public class BussinessClass {
 ```java
 @Slf4j
 @Component
+@AllArgsConstructor
 public class TestHandler implements ShortRunTaskHandler {
 
+    @Override
+    public int getType() {
+        //不同handler之间的type不能相同
+        return 0;
+    }
+
+    @Override
     public TaskResult handleShortTask(TaskContext taskContext) {
-        log.info("处理测试任务开始...");
-        
+        log.info("处理测试任务开始，任务内容：{}", JsonUtil.toJsonStr(taskContext.getContext()));
+
         //TODO 业务逻辑
-        
+
         return TaskResult.successWith("test success");
     }
 }

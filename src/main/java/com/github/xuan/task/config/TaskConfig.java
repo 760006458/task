@@ -1,11 +1,9 @@
 package com.github.xuan.task.config;
 
-import com.github.xuan.task.param.TaskType;
 import lombok.Data;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
-import java.util.List;
 
 /**
  * MapperScan：扫描路径一定要精细，否则会对包下所有接口进行代理
@@ -24,11 +22,6 @@ public class TaskConfig {
      * ${task.fixedDelayString.normal}和${task.fixedDelayString.timeout}
      */
     private FixedDelay fixedDelay;
-
-    /**
-     * 注册任务类型
-     */
-    private List<TaskType> types;
 
     /**
      * 普通任务的MySQL抓取数量(pageSize)

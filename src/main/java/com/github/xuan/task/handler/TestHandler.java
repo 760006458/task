@@ -19,6 +19,11 @@ package com.github.xuan.task.handler;
 //public class TestHandler implements ShortRunTaskHandler {
 //
 //    @Override
+//    public int getType() {
+//        return 0;
+//    }
+//
+//    @Override
 //    public TaskResult handleShortTask(TaskContext taskContext) {
 //        log.info("处理测试任务开始，任务内容：{}", JsonUtil.toJsonStr(taskContext.getContext()));
 //

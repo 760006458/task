@@ -1,5 +1,6 @@
 package com.github.xuan.task.param;
 
+import com.github.xuan.task.handler.TaskHandler;
 import com.github.xuan.task.util.JsonUtil;
 import lombok.Builder;
 import lombok.Data;
@@ -25,7 +26,7 @@ public class TaskCreateParam {
     /**
      * 类型
      */
-    private Integer type;
+    private Class<? extends TaskHandler> typeHandler;
 
     /**
      * 任务key。组合唯一索引(type+taskKey)

@@ -1,12 +1,9 @@
 package com.github.xuan.task.service;
 
 import com.github.xuan.task.handler.TaskHandler;
-import com.github.xuan.task.param.TaskType;
-import com.github.xuan.task.util.Validates;
 import com.google.common.collect.Maps;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
@@ -28,19 +25,13 @@ public class HandlerContext {
     private static final ConcurrentMap<Integer, TaskHandler> TASK_HANDLERS = Maps.newConcurrentMap();
 
     /**
-     * key: TaskHandler类的名字
-     * value: TaskType对象
-     */
-    private static final ConcurrentMap<String, TaskType> TASK_TYPES = Maps.newConcurrentMap();
-
-    /**
      * 注册需要执行的任务类型，如果不注册，则batchGetTask时不会获取
      */
     public void registerTaskHandler(TaskHandler taskHandler) {
         if (taskHandler == null) {
             throw new RuntimeException("handler is null");
         }
-        TaskHandler handler = TASK_HANDLERS.putIfAbsent(ofTaskType(taskHandler.getHandlerName()), taskHandler);
+        TaskHandler handler = TASK_HANDLERS.putIfAbsent(taskHandler.getType(), taskHandler);
         if (handler != null) {
             if (handler.getClass() == taskHandler.getClass()) {
                 String template = "%s only support register once";
@@ -48,19 +39,12 @@ public class HandlerContext {
                 throw new UnsupportedOperationException(message);
             } else {
                 String template = "A task type does not support multiple handlers. Exist type & handler pair [%s]-[%s]";
-                String message = String.format(template, ofTaskType(taskHandler.getHandlerName()), taskHandler.getClass());
+                String message = String.format(template, taskHandler.getType(), taskHandler.getClass().getSimpleName());
                 throw new UnsupportedOperationException(message);
             }
         } else {
-            log.info("TaskHandler[{}] Registered!", ofTaskType(taskHandler.getHandlerName()));
+            log.info("TaskHandler[{}] Registered!", taskHandler.getHandlerName());
         }
-    }
-
-    /**
-     * 注册TaskType
-     */
-    public void registerTaskType(List<TaskType> taskTypes) {
-        taskTypes.forEach(type -> TASK_TYPES.putIfAbsent(type.getHandlerName(), type));
     }
 
     /**
@@ -78,11 +62,11 @@ public class HandlerContext {
     }
 
     /**
-     * 根据taskName获取TaskType对象
+     * 根据handlerName获取任务类型
      */
-    public Integer ofTaskType(String handlerName) {
-        TaskType taskType = TASK_TYPES.get(handlerName);
-        Validates.checkNotNull(taskType, String.format("handlerName=%s不存在", handlerName));
-        return taskType.type;
+    public Integer ofHandlerType(String handlerName) {
+        return TASK_HANDLERS.values().stream().filter(e -> e.getHandlerName().equals(handlerName))
+                .findFirst().orElseThrow(() -> new RuntimeException("handlerName=%s不存在")).getType();
     }
+
 }
