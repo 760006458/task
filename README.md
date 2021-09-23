@@ -110,7 +110,7 @@ public class TestHandler implements ShortRunTaskHandler {
 
     @Override
     public int getType() {
-        //不同handler之间的type不能相同
+        //不同handler之间的type不能相同，对于handler特别多的场景，建议使用方用enum来维护列表
         return 0;
     }
 
